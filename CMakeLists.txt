@@ -4,8 +4,14 @@ cmake_minimum_required(VERSION 3.15)
 # Project details
 #
 
+#set(CMAKE_C_COMPILER "clang")
+
+#set(CMAKE_CXX_COMPILER "clang++")
+# if openmp does not work!
+# set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") 
+
 project(
-  "Project"
+  "compc"
   VERSION 0.1.0
   LANGUAGES CXX
 )
@@ -18,13 +24,19 @@ include(cmake/StandardSettings.cmake)
 include(cmake/StaticAnalyzers.cmake)
 include(cmake/Utils.cmake)
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Debug")
+  set(CMAKE_BUILD_TYPE "Release")
 endif()
 message(STATUS "Started CMake for ${PROJECT_NAME} v${PROJECT_VERSION}...\n")
 
 if (UNIX)
     add_compile_options("$<$<CONFIG:DEBUG>:-D_DEBUG>")    #this will allow to use same _DEBUG macro available in both Linux as well as Windows - MSCV environment. Easy to put Debug specific code.
 endif (UNIX)
+
+
+# User defined cache variables
+
+SET(SANATIZE_FLAG "address" CACHE STRING "Option for -fsanatize")
+
 
 
 #
@@ -129,6 +141,30 @@ endif()
 message(STATUS "Added all header and implementation files.\n")
 
 #
+# Set the project build flags
+#
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  message(STATUS "Using -O3 Flag\n")
+    # May need  -Xclang for clang
+    # could conflict with flags set by tests.
+    # For clang needs libomp-dev dependency
+  target_compile_options(${PROJECT_NAME} PRIVATE -O3) 
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Sanatize")
+  message(STATUS "Sanatize + Using -O3 Flag\n")
+  target_compile_options(${PROJECT_NAME} PRIVATE -O3 -g) # without -g we do not get the line numbers.
+  target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=${SANATIZE_FLAG}) # -fsanitize-memory-track-origins -fsanitize=undefined -fsanitize=memory
+  # is not working
+  target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=${SANATIZE_FLAG}) # -fsanitize-memory-track-origins -fsanitize=undefined -fsanitize=memory
+  # add_link_options(-fsanitize=${SANATIZE_FLAG})
+  else()
+  message(STATUS "Using -O0 Flag\n")
+  target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
+endif()
+
+
+
+#
 # Set the project standard and warnings
 #
 
@@ -155,7 +191,11 @@ include(cmake/Doxygen.cmake)
 #
 # Model project dependencies
 #
-
+# May need  -Xclang for clang
+# could conflict with flags set by tests.
+# For clang needs libomp-dev dependency
+find_package(OpenMP REQUIRED)
+target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX) # Needs to be public otherwise it does not work sometimes
 # Identify and link with the specific "packages" the project uses
 #find_package(package_name package_version REQUIRED package_type [other_options])
 #target_link_libraries(
@@ -352,6 +392,7 @@ endif()
 
 message(STATUS "Finished building requirements for installing the package.\n")
 
+
 #
 # Unit testing setup
 #
@@ -361,3 +402,7 @@ if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   message(STATUS "Build unit tests for the project. Tests should always be found in the test folder\n")
   add_subdirectory(test)
 endif()
+
+get_target_property(MAIN_CFLAGS ${PROJECT_NAME} COMPILE_OPTIONS)
+# also see: COMPILE_DEFINITIONS INCLUDE_DIRECTORIES
+message("-- Target compiler flags are: ${MAIN_CFLAGS}")

@@ -9,11 +9,16 @@ project(
   LANGUAGES CXX
 )
 
-verbose_message("Adding tests under ${CMAKE_PROJECT_NAME}Tests...")
+message("Adding tests under ${CMAKE_PROJECT_NAME}Tests...")
 
 foreach(file ${test_sources})
+  message("Handling TEST file ${file}")
   string(REGEX REPLACE "(.*/)([a-zA-Z0-9_ ]+)(\.cpp)" "\\2" test_name ${file}) 
-  add_executable(${test_name}_Tests ${file})
+  add_executable(${test_name}_Tests ${file} "src/helpers.cpp")
+  message("Target ${test_name}_Tests for file ${file}")
+
+
+  message("Include ${CMAKE_SOURCE_DIR}/include and ${CMAKE_SOURCE_DIR}/src")
 
   #
   # Set the compiler standard
@@ -81,4 +86,4 @@ foreach(file ${test_sources})
   )
 endforeach()
 
-verbose_message("Finished adding unit tests for ${CMAKE_PROJECT_NAME}.")
+message("Finished adding unit tests for ${CMAKE_PROJECT_NAME}.")
