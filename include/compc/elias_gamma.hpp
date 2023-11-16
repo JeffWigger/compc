@@ -22,7 +22,7 @@ namespace compc
 
    private:
     uint32_t batch_size_small{ 50 };
-    uint32_t batch_size_large{ 500 };
+    uint32_t batch_size_large{ 1000 };
   };
 }  // namespace compc
 

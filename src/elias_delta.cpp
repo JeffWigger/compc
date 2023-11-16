@@ -1,4 +1,4 @@
-#include "compc/elias_gamma.hpp"
+#include "compc/elias_delta.hpp"
 
 #include <math.h>
 #include <omp.h>
@@ -13,14 +13,14 @@
 #include "compc/helpers.hpp"
 
 template<typename T>
-std::size_t compc::EliasGamma<T>::get_compressed_length(const T* array, std::size_t length)
+std::size_t compc::EliasDelta<T>::get_compressed_length(const T* array, std::size_t length)
 {
   compc::ArrayPrefixSummary prefix_tuple = get_prefix_sum_array(array, length);
   return prefix_tuple.local_sums[prefix_tuple.total_chunks - 1];
 }
 
 template<typename T>
-compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* array, std::size_t length)
+compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* array, std::size_t length)
 {
   int local_threads = this->num_threads;
   uint32_t batch_size = this->batch_size_small;
@@ -62,8 +62,9 @@ compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* ar
       {
         T elem = array[i];
         error |= !elem; // checking for negative inputs
-        // 2*N + 1
-        l_sum += (static_cast<uint64_t>(hlprs::log2(static_cast<unsigned long long>(elem))) << 1) + 1;
+        int N = hlprs::log2(static_cast<unsigned long long>(elem));
+        int L = hlprs::log2(static_cast<unsigned long long>(N+1));
+        l_sum += (L << 1) + 1 + N;
       }
       local_sums[start / batch_size] = l_sum;
       start += num_threads_local * batch_size;
@@ -83,7 +84,7 @@ compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* ar
 }
 
 template<typename T>
-uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
+uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
 {
   const uint64_t N = size;
   T* array;
@@ -130,7 +131,7 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
   const uint64_t compressed_length = prefix_array[total_chunks - 1];
   const uint64_t compressed_bytes = (compressed_length + 7) / 8;  // getting the number of bytes (ceil)
   // zero initialize, otherwise there are problems at the edges of the batches
-  uint8_t* compressed = new uint8_t[compressed_bytes]();
+  uint8_t* compressed = new uint8_t[compressed_bytes]();  
 
 #pragma omp parallel shared(compressed, prefix_array) firstprivate(N) num_threads(local_threads)
   {
@@ -165,8 +166,11 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
       for (std::size_t i = start_index; i < end_index; i++)
       {
         T value = array[i];
-        int length_prefix_part = hlprs::log2(static_cast<unsigned long long>(value));
-        int length_binary_part = length_prefix_part + 1;
+        int local_N = hlprs::log2(static_cast<unsigned long long>(elem));
+        int local_N_1 = local_N + 1;
+        int length_prefix_part = hlprs::log2(static_cast<unsigned long long>(local_N_1));
+        int length_infix_part = length_prefix_part + 1;
+        int length_binary_part = local_N;
 
         // Part 1: writing the prefix 0s
         while (length_prefix_part > 0)
@@ -195,35 +199,46 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
         }
         // if(bits_left == 0){ // do we need to handle this case
         // Part 2: writing the number in binary
-        while (length_binary_part > 0)
-        {
-          uint8_t mask = 255u;
-          mask = mask >> (8 - bits_left);
-          if (bits_left > 0 && length_binary_part >= bits_left)
+        for(int i = 0; i < 2; i++){
+          T local_value;
+          int local_binary_length;
+          if (i == 1){
+            local_value = value;
+            local_binary_length = length_binary_part;
+          }else{
+            local_value = static_cast<T>(local_N_1);
+            local_binary_length = length_infix_part;
+          }
+          while (local_binary_length > 0)
           {
-            length_binary_part = length_binary_part - bits_left;
-            current_byte = current_byte | static_cast<uint8_t>((value >> length_binary_part) & mask);
-            bits_left = 0;
-            if (index == start_byte || index == end_byte)
+            uint8_t mask = 255u;
+            mask = mask >> (8 - bits_left);
+            if (bits_left > 0 && local_binary_length >= bits_left)
             {
+              local_binary_length = local_binary_length - bits_left;
+              current_byte = current_byte | static_cast<uint8_t>((value >> local_binary_length) & mask);
+              bits_left = 0;
+              if (index == start_byte || index == end_byte)
+              {
 #pragma omp atomic
-              compressed[index] |= current_byte;
+                compressed[index] |= current_byte;
+              }
+              else
+              {
+                compressed[index] = current_byte;
+              }
+              index++;
+              current_byte = 0;
+              bits_left = 8;
             }
-            else
+            else if (bits_left > 0 && local_binary_length < bits_left)
             {
-              compressed[index] = current_byte;
+              current_byte = current_byte | static_cast<uint8_t>((value << (bits_left - local_binary_length)) & mask);
+              bits_left -= local_binary_length;
+              local_binary_length = 0;
             }
-            index++;
-            current_byte = 0;
-            bits_left = 8;
+            // if(bits_left == 0){ // os we need to handle this case?
           }
-          else if (bits_left > 0 && length_binary_part < bits_left)
-          {
-            current_byte = current_byte | static_cast<uint8_t>((value << (bits_left - length_binary_part)) & mask);
-            bits_left -= length_binary_part;
-            length_binary_part = 0;
-          }
-          // if(bits_left == 0){ // os we need to handle this case?
         }
       }
       if (bits_left < 8)
@@ -243,7 +258,7 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
 }
 
 template<typename T>
-T* compc::EliasGamma<T>::decompress(const uint8_t* array, std::size_t binary_length, std::size_t array_length)
+T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_length, std::size_t array_length)
 {
   T* uncomp = new T[array_length];
   std::size_t index = 0;
@@ -308,9 +323,9 @@ T* compc::EliasGamma<T>::decompress(const uint8_t* array, std::size_t binary_len
   return uncomp;
 }
 
-template class compc::EliasGamma<int16_t>;
-template class compc::EliasGamma<uint16_t>;
-template class compc::EliasGamma<int32_t>;
-template class compc::EliasGamma<uint32_t>;
-template class compc::EliasGamma<int64_t>;
-template class compc::EliasGamma<uint64_t>;
+template class compc::EliasDelta<int16_t>;
+template class compc::EliasDelta<uint16_t>;
+template class compc::EliasDelta<int32_t>;
+template class compc::EliasDelta<uint32_t>;
+template class compc::EliasDelta<int64_t>;
+template class compc::EliasDelta<uint64_t>;
