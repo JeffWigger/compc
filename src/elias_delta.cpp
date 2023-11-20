@@ -166,7 +166,7 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
       for (std::size_t i = start_index; i < end_index; i++)
       {
         T value = array[i];
-        int local_N = hlprs::log2(static_cast<unsigned long long>(elem));
+        int local_N = hlprs::log2(static_cast<unsigned long long>(value));
         int local_N_1 = local_N + 1;
         int length_prefix_part = hlprs::log2(static_cast<unsigned long long>(local_N_1));
         int length_infix_part = length_prefix_part + 1;
@@ -205,6 +205,8 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
           if (i == 1){
             local_value = value;
             local_binary_length = length_binary_part;
+            // the leading 1 is not written
+            local_value = local_value ^ (1 << local_binary_length);
           }else{
             local_value = static_cast<T>(local_N_1);
             local_binary_length = length_infix_part;
@@ -216,7 +218,7 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
             if (bits_left > 0 && local_binary_length >= bits_left)
             {
               local_binary_length = local_binary_length - bits_left;
-              current_byte = current_byte | static_cast<uint8_t>((value >> local_binary_length) & mask);
+              current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
               bits_left = 0;
               if (index == start_byte || index == end_byte)
               {
@@ -233,7 +235,7 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
             }
             else if (bits_left > 0 && local_binary_length < bits_left)
             {
-              current_byte = current_byte | static_cast<uint8_t>((value << (bits_left - local_binary_length)) & mask);
+              current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
               bits_left -= local_binary_length;
               local_binary_length = 0;
             }

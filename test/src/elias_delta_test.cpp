@@ -21,6 +21,20 @@ TEST(Elias_Unit_Delta_GetCompressedLength, CheckValues)
 }
 
 
+TEST(Elias_Unit_Encode, CheckValues)
+{
+  std::size_t size = 5;
+  long input[5] =  {1, 2, 5, 10, 17};
+  uint8_t output[4] = {163, 72, 138, 32};
+  compc::EliasDelta<long> elias;
+  uint8_t* comp = elias.compress(input, size);
+  for (std::size_t i=0; i < size ; i++){
+    std::cout << std::bitset<8>(comp[i])  << std::endl;
+    ASSERT_EQ(output[i], comp[i]);
+  }
+}
+
+
 
 TEST(Elias_Delta_DecompCompEQTestLong, CheckValues)
 {
