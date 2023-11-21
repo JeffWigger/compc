@@ -157,7 +157,7 @@ elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Sanatize")
   # is not working
   target_link_options(${PROJECT_NAME} PUBLIC -fsanitize=${SANATIZE_FLAG}) # -fsanitize-memory-track-origins -fsanitize=undefined -fsanitize=memory
   # add_link_options(-fsanitize=${SANATIZE_FLAG})
-  else()
+else()
   message(STATUS "Using -O0 Flag\n")
   target_compile_options(${PROJECT_NAME} PRIVATE -O0 -g)
 endif()

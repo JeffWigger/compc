@@ -265,8 +265,10 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
   T* uncomp = new T[array_length];
   std::size_t index = 0;
   T current_decoded_number = 0;
-  uint length_binary_part = 0;
+  uint length_infix_part = 0;
+  uint length_suffix_part = 0;
   bool reading_prefix_zeros = true;
+  bool reading_infix = true;
   std::size_t binary_index = 0;
   uint8_t current_byte = array[binary_index];
   uint8_t bits_left = 8;
@@ -279,9 +281,6 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
       current_byte = array[binary_index];
       bits_left = 8;
     }
-    // if (binary_length < 20)
-    //   std::cout << "while 1 " << bits_left << " " << std::bitset<8>(current_byte) << " " << binary_index << " " <<
-    //   current_decoded_number << " " <<processed_bits <<  std::endl;
     uint8_t cur_copy = current_byte;
     current_byte = current_byte << (8 - bits_left);
     // TODO: process more than one bit at a time.
@@ -291,21 +290,41 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
       current_byte = current_byte << state;
       bits_left -= state;
       reading_prefix_zeros = state;
-      length_binary_part++;
+      length_infix_part++;
     }
     current_byte = cur_copy;
 
     while (!reading_prefix_zeros && bits_left > 0)
     {
+      int local_binary_length; 
+      bool start_state_infix = true;
+      if (reading_infix){
+        local_binary_length = length_infix_part;
+      } else {
+        local_binary_length = length_suffix_part;
+        start_state_infix = false;
+      }
       uint8_t mask = 255u >> (8 - bits_left);
       T curT = static_cast<T>(current_byte & mask);
-      bool state = (length_binary_part >= bits_left);
-      // uint8_t bits_to_process = state * bits_left + !state * length_binary_part;
-      uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(length_binary_part);
+      bool state = (local_binary_length >= bits_left);
+      // uint8_t bits_to_process = state * bits_left + !state * local_binary_length;
+      uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(local_binary_length);
       bits_left -= bits_to_process;
-      length_binary_part -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << length_binary_part) >> bits_left);
-      reading_prefix_zeros = !length_binary_part;
+      local_binary_length -= bits_to_process;
+      current_decoded_number = current_decoded_number | ((curT << local_binary_length) >> bits_left);
+      if (reading_infix){
+        length_infix_part = local_binary_length;
+      } else {
+        length_suffix_part = local_binary_length;
+      }
+      reading_infix = !length_infix_part;
+      reading_prefix_zeros = !length_suffix_part;
+      if (!reading_infix && start_state_infix){
+        length_suffix_part = current_decoded_number;
+        // inserting the implied leading 1
+        current_decoded_number = 1 << length_infix_part;
+        length_suffix_part--;
+      }
       if (reading_prefix_zeros)
       {
         uncomp[index] = current_decoded_number;

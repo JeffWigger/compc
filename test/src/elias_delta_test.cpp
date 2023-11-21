@@ -35,6 +35,19 @@ TEST(Elias_Unit_Encode, CheckValues)
 }
 
 
+TEST(Elias_Unit_Decode, CheckValues)
+{
+  std::size_t size = 5;
+  uint8_t input[4] =  {163, 72, 138, 32};
+  long output[5] = {1, 2, 5, 10, 17};
+  compc::EliasDelta<long> elias;
+  long* res = elias.decompress(input, 4, size);
+  for (std::size_t i=0; i < size ; i++){
+    std::cout << res[i]  << std::endl;
+    ASSERT_EQ(output[i], res[i]);
+  }
+}
+
 
 TEST(Elias_Delta_DecompCompEQTestLong, CheckValues)
 {

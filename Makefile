@@ -44,6 +44,13 @@ help:
 
 test: ## run tests quickly with ctest
 	rm -rf build/
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Debug" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0
+	cmake --build build --config Release
+	cd build/ && ctest -C Release -VV 
+#--gtest_filter=Elias_Gamma_DecompCompEQTestLong
+
+test-fast: ## run tests quickly with ctest
+	rm -rf build/
 	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Release" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV 
