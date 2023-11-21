@@ -286,6 +286,7 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
     // TODO: process more than one bit at a time.
     while (reading_prefix_zeros && bits_left > 0)
     {
+      // check if the current position we are reading is a 1
       bool state = !(current_byte >> 7);  // is either 0, or 1
       current_byte = current_byte << state;
       bits_left -= state;
@@ -298,6 +299,7 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
     {
       int local_binary_length; 
       bool start_state_infix = true;
+      reading_infix = length_infix_part > 0;
       if (reading_infix){
         local_binary_length = length_infix_part;
       } else {
@@ -311,20 +313,20 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
       uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(local_binary_length);
       bits_left -= bits_to_process;
       local_binary_length -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << local_binary_length) >> bits_left);
+      current_decoded_number = current_decoded_number | ((curT << local_binary_length) >> bits_left); // last part is suspect
       if (reading_infix){
         length_infix_part = local_binary_length;
       } else {
         length_suffix_part = local_binary_length;
       }
-      reading_infix = !length_infix_part;
-      reading_prefix_zeros = !length_suffix_part;
+      reading_infix = length_infix_part > 0;
       if (!reading_infix && start_state_infix){
         length_suffix_part = current_decoded_number;
         // inserting the implied leading 1
-        current_decoded_number = 1 << length_infix_part;
         length_suffix_part--;
+        current_decoded_number = 1 << length_suffix_part;
       }
+      reading_prefix_zeros = !length_suffix_part && !reading_infix;
       if (reading_prefix_zeros)
       {
         uncomp[index] = current_decoded_number;
