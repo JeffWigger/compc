@@ -1,4 +1,4 @@
-#include "compc/elias_delta.hpp"
+#include "compc/elias_omega.hpp"
 
 #include <math.h>
 #include <omp.h>
@@ -13,14 +13,14 @@
 #include "compc/helpers.hpp"
 
 template<typename T>
-std::size_t compc::EliasDelta<T>::get_compressed_length(const T* array, std::size_t length)
+std::size_t compc::EliasOmega<T>::get_compressed_length(const T* array, std::size_t length)
 {
   compc::ArrayPrefixSummary prefix_tuple = get_prefix_sum_array(array, length);
   return prefix_tuple.local_sums[prefix_tuple.total_chunks - 1];
 }
 
 template<typename T>
-compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* array, std::size_t length)
+compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* array, std::size_t length)
 {
   int local_threads = this->num_threads;
   uint32_t batch_size = this->batch_size_small;
@@ -63,8 +63,12 @@ compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* ar
         T elem = array[i];
         error |= !elem; // checking for negative inputs
         int N = hlprs::log2(static_cast<unsigned long long>(elem));
-        int L = hlprs::log2(static_cast<unsigned long long>(N+1));
-        l_sum += (L << 1) + 1 + N;
+        // TODO: test for 0 and negative numbers
+        while (N >= 1){
+          l_sum += N + 1;
+          N = hlprs::log2(static_cast<unsigned long long>(N));
+        }
+        l_sum++;
       }
       local_sums[start / batch_size] = l_sum;
       start += num_threads_local * batch_size;
@@ -84,7 +88,7 @@ compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* ar
 }
 
 template<typename T>
-uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
+uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
 {
   const uint64_t N = size;
   T* array;
@@ -260,7 +264,7 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
 }
 
 template<typename T>
-T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_length, std::size_t array_length)
+T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_length, std::size_t array_length)
 {
   T* uncomp = new T[array_length];
   std::size_t index = 0;
@@ -345,9 +349,9 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
   return uncomp;
 }
 
-template class compc::EliasDelta<int16_t>;
-template class compc::EliasDelta<uint16_t>;
-template class compc::EliasDelta<int32_t>;
-template class compc::EliasDelta<uint32_t>;
-template class compc::EliasDelta<int64_t>;
-template class compc::EliasDelta<uint64_t>;
+template class compc::EliasOmega<int16_t>;
+template class compc::EliasOmega<uint16_t>;
+template class compc::EliasOmega<int32_t>;
+template class compc::EliasOmega<uint32_t>;
+template class compc::EliasOmega<int64_t>;
+template class compc::EliasOmega<uint64_t>;

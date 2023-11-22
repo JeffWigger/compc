@@ -1,3 +1,4 @@
+#include "compc/elias_omega.hpp"
 #include "compc/elias_delta.hpp"
 #include <gtest/gtest.h>
 #include <cstdint>
@@ -9,18 +10,28 @@ using namespace std::chrono;
 
 
 
-TEST(Elias_Delta_Unit_Delta_GetCompressedLength, CheckValues)
+TEST(Elias_Omega_Unit_Delta_GetCompressedLength, CheckValues)
 {
   std::size_t size = 7;
-  long input[7] =  {1, 2, 3, 4, 5, 10, 17};
-  compc::EliasDelta<long> elias;
+  long input[7] =  {1, 2, 3, 4, 5, 10, 17 };
+  compc::EliasOmega<long> elias;
   std::size_t length = elias.get_compressed_length(input, size);
   std::cout << "compressed length: " << length << std::endl;
-  ASSERT_EQ(length, 36); // comparing values
+  ASSERT_EQ(length, 37); // comparing values
 }
 
 
-TEST(Elias_Delta_Unit_Encode, CheckValues)
+TEST(Elias_Omega_Unit_Delta_GetCompressedLength_10, CheckValues)
+{
+  std::size_t size = 11;
+  long input[11] =  {1, 2, 3, 4, 5, 10, 17, 100, 10000, 100000, 1000000};
+  compc::EliasOmega<long> elias;
+  std::size_t length = elias.get_compressed_length(input, size);
+  std::cout << "compressed length: " << length << std::endl;
+  ASSERT_EQ(length, 130); // comparing values
+}
+
+TEST(Elias_Omega_Unit_Encode, CheckValues)
 {
   std::size_t size = 5;
   long input[5] =  {1, 2, 5, 10, 17};
@@ -34,7 +45,7 @@ TEST(Elias_Delta_Unit_Encode, CheckValues)
 }
 
 
-TEST(Elias_Delta_Unit_Decode, CheckValues)
+TEST(Elias_Omega_Unit_Decode, CheckValues)
 {
   std::size_t size = 5;
   uint8_t input[4] =  {163, 72, 138, 32};
@@ -48,7 +59,7 @@ TEST(Elias_Delta_Unit_Decode, CheckValues)
 }
 
 
-TEST(Elias_Delta_DecompCompEQTestLong, CheckValues)
+TEST(Elias_Omega_DecompCompEQTestLong, CheckValues)
 {
   std::size_t size = 10;
   long input[10] =  {1, 3, 2000, 2, 50, 1,25345, 11, 10000000, 1};
@@ -70,7 +81,7 @@ TEST(Elias_Delta_DecompCompEQTestLong, CheckValues)
 }
 
 
-TEST(Elias_Delta_SpeedTestLong, CheckValues)
+TEST(Elias_Omega_SpeedTestLong, CheckValues)
 {
   std::size_t len = 500000;
   std::size_t len_copy = len;
@@ -99,7 +110,7 @@ TEST(Elias_Delta_SpeedTestLong, CheckValues)
   delete [] random_array;
 }
 
-TEST(Elias_Delta_DecompCompEQTestInt, CheckValues)
+TEST(Elias_Omega_DecompCompEQTestInt, CheckValues)
 {
   std::size_t size = 10;
   int input[10] =  {1, 3, 2000, 2, 50, 1,25345, 11, 1000000, 1};
@@ -117,7 +128,7 @@ TEST(Elias_Delta_DecompCompEQTestInt, CheckValues)
   delete [] output;
 }
 
-TEST(Elias_Delta_DecompCompEQTestShort, CheckValues)
+TEST(Elias_Omega_DecompCompEQTestShort, CheckValues)
 {
   std::size_t size = 10;
   short input[10] =  {1, 3, 2000, 2, 50, 1,25345, 11, 10000, 1};
@@ -244,7 +255,7 @@ TEST(Helpers_add_offset, CheckValues)
   }
 }
 
-TEST(Elias_Delta_DecompCompEQTestNegativeLong, CheckValues)
+TEST(Elias_Omega_DecompCompEQTestNegativeLong, CheckValues)
 {
   std::size_t size = 10;
   long input[10] =  {1, 3, 2000, 2, 50, 1,25345, 11, 10000, 1};
