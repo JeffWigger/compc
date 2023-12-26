@@ -164,86 +164,73 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
       std::size_t start_byte = start_bit / 8;
       std::size_t end_byte = end_bit / 8;
       std::size_t index = start_byte;  // index for the byte array
-      // std::cout << "start at byte: " << index << " start bit " << start_bit << " start index " << start_index << " end
-      // index "<< end_index << std::endl;
       int bits_left = 8 - (static_cast<int>(start_bit) - static_cast<int>(start_byte) * 8);
       for (std::size_t i = start_index; i < end_index; i++)
       {
-        T value = array[i];
-        int local_N = hlprs::log2(static_cast<unsigned long long>(value));
-        int local_N_1 = local_N + 1;
-        int length_prefix_part = hlprs::log2(static_cast<unsigned long long>(local_N_1));
-        int length_infix_part = length_prefix_part + 1;
-        int length_binary_part = local_N;
+        T local_N = array[i];
+        // unrolling recursive definition of omega coding
+        std::vector<uint8_t> v;
+        uint8_t local_byte = 0;
+        int local_bits_left = 7; // writting the 0
 
-        // Part 1: writing the prefix 0s
-        while (length_prefix_part > 0)
-        {
-          if (bits_left > length_prefix_part)
-          {
-            bits_left -= length_prefix_part;
-            length_prefix_part = 0;
-          }
-          else
-          {
-            if (index == start_byte)
-            {  // || index == end_byte
-#pragma omp atomic
-              compressed[index] = compressed[index] | current_byte;
-            }
-            else
-            {
-              compressed[index] = compressed[index] | current_byte;
-            }
-            index++;
-            length_prefix_part = length_prefix_part - bits_left;
-            current_byte = 0;
-            bits_left = 8;
-          }
-        }
-        // if(bits_left == 0){ // do we need to handle this case
-        // Part 2: writing the number in binary
-        for(int i = 0; i < 2; i++){
-          T local_value;
-          int local_binary_length;
-          if (i == 1){
-            local_value = value;
-            local_binary_length = length_binary_part;
-            // the leading 1 is not written
-            local_value = local_value ^ (1 << local_binary_length);
-          }else{
-            local_value = static_cast<T>(local_N_1);
-            local_binary_length = length_infix_part;
-          }
+        while (local_N > 1){
+          T N_binary_length = static_cast<T>(hlprs::log2(static_cast<unsigned long long>(local_N))) + 1;
+          T local_binary_length = N_binary_length;
           while (local_binary_length > 0)
           {
             uint8_t mask = 255u;
-            mask = mask >> (8 - bits_left);
-            if (bits_left > 0 && local_binary_length >= bits_left)
+            mask = mask >> (8 - local_bits_left);
+            if (local_bits_left > 0 && local_binary_length >= local_bits_left)
             {
-              local_binary_length = local_binary_length - bits_left;
-              current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
-              bits_left = 0;
-              if (index == start_byte || index == end_byte)
-              {
-#pragma omp atomic
-                compressed[index] |= current_byte;
-              }
-              else
-              {
-                compressed[index] = current_byte;
-              }
-              index++;
-              current_byte = 0;
-              bits_left = 8;
+              local_binary_length -= local_bits_left;
+              local_byte = local_byte | static_cast<uint8_t>((local_N >> local_binary_length) & mask);
+              v.push_back(local_byte);
+              local_byte = 0;
+              local_bits_left = 8;
             }
-            else if (bits_left > 0 && local_binary_length < bits_left)
+            else if (local_bits_left > 0 && local_binary_length < local_bits_left)
             {
-              current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
-              bits_left -= local_binary_length;
+              local_byte = local_byte | static_cast<uint8_t>((local_N << (local_bits_left - local_binary_length)) & mask);
+              local_bits_left -= local_binary_length;
               local_binary_length = 0;
             }
-            // if(bits_left == 0){ // os we need to handle this case?
+          }
+          local_N = local_binary_length - 1;
+        }
+        
+        // TODO: write out all bytes in v
+        // the leftovers are still in current_byte
+        T local_binary_length = 8 - static_cast<T>(local_bits_left);
+        uint8_t local_value = local_byte 
+        while(!v.empty()){
+          if (local_binary_length == 0){
+            local_value = v.pop_back();
+          }
+          uint8_t mask = 255u;
+          mask = mask >> (8 - bits_left);
+          if (bits_left > 0 && local_binary_length >= bits_left)
+          {
+            local_binary_length = local_binary_length - bits_left;
+            current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
+            bits_left = 0;
+            if (index == start_byte || index == end_byte)
+            {
+#pragma omp atomic
+              compressed[index] |= current_byte;
+            }
+            else
+            {
+              compressed[index] = current_byte;
+            }
+            index++;
+            current_byte = 0;
+            bits_left = 8;
+          }
+          else if (bits_left > 0 && local_binary_length < bits_left)
+          {
+            current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
+            bits_left -= local_binary_length;
+            local_binary_length = 0;
           }
         }
       }
