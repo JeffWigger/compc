@@ -16,17 +16,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4.1.1
       
     - name: cache dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v3.3.2
       id: cache
       with:
         path: ${{ github.workspace }}/${{ env.INSTALL_LOCATION }}
         key: ${{ runner.os }}-dependencies
+  
+    - name: install openmp
+      run: sudo apt-get install -y libomp-dev 
 
     - name: install GoogleTest
-      if: ${{ steps.cache.output.cache-hit != 'true' }}
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         cd ..
         git clone https://github.com/google/googletest.git --branch release-1.12.1
@@ -36,7 +39,7 @@ jobs:
         cmake --build build --target install --config Release
 
     - name: configure
-      run: cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_LOCATION -Dcompc_ENABLE_CODE_COVERAGE=1 -D CMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_LOCATION -Dcompc_ENABLE_UNIT_TESTING=1 -Dcompc_ENABLE_CODE_COVERAGE=0 -D CMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=$BUILD_TYPE
       
     - name: build
       run: cmake --build build --config $BUILD_TYPE -j4

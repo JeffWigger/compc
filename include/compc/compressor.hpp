@@ -30,7 +30,7 @@ namespace compc
     virtual uint8_t* compress(T*, std::size_t&) = 0;
     virtual T* decompress(const uint8_t*, std::size_t, std::size_t) = 0;
     virtual std::size_t get_compressed_length(const T*, std::size_t) = 0;
-    int num_threads{ 1 };  // TODO: figure out how to read system env variables.
+    int num_threads{ 1 };
 
     void transform_to_natural_numbers(T* array, const std::size_t& size)
     {

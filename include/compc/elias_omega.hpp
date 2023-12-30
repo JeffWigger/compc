@@ -1,5 +1,5 @@
-#ifndef COMPC_ELIAS_GAMMA_H_
-#define COMPC_ELIAS_GAMMA_H_
+#ifndef COMPC_ELIAS_OMEGA_H_
+#define COMPC_ELIAS_OMEGA_H_
 #include <cstdint>
 #include <tuple>
 
@@ -8,13 +8,13 @@ namespace compc
 {
 
   template<typename T>
-  class EliasGamma : public EliasBase<T>
+  class EliasOmega : public EliasBase<T>
   {
    public:
-    EliasGamma() = default;
-    EliasGamma(T zero_offset, bool map_negative_numbers_to_positive)
+    EliasOmega() = default;
+    EliasOmega(T zero_offset, bool map_negative_numbers_to_positive)
         : EliasBase<T>(zero_offset, map_negative_numbers_to_positive){};
-    ~EliasGamma() = default;
+    ~EliasOmega() = default;
     uint8_t* compress(T*, std::size_t&) override;
     T* decompress(const uint8_t*, std::size_t, std::size_t) override;
     std::size_t get_compressed_length(const T*, std::size_t) override;
@@ -26,4 +26,4 @@ namespace compc
   };
 }  // namespace compc
 
-#endif  // COMPC_ELIAS_GAMMA_H_
+#endif  // COMPC_ELIAS_DELTA_H_
