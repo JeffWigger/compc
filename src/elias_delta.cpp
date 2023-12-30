@@ -45,7 +45,6 @@ compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* ar
     std::size_t thread_num = static_cast<std::size_t>(omp_get_thread_num());
     std::size_t num_threads_local = static_cast<std::size_t>(omp_get_num_threads());
     std::size_t start = thread_num * batch_size;
-    // std::cout << "thread id: " << thread_num << " num threads: " << num_threads_local << std::endl;
     while (true)
     {
       std::size_t l_sum = 0;
@@ -160,8 +159,6 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
       std::size_t start_byte = start_bit / 8;
       std::size_t end_byte = end_bit / 8;
       std::size_t index = start_byte;  // index for the byte array
-      // std::cout << "start at byte: " << index << " start bit " << start_bit << " start index " << start_index << " end
-      // index "<< end_index << std::endl;
       int bits_left = 8 - (static_cast<int>(start_bit) - static_cast<int>(start_byte) * 8);
       for (std::size_t i = start_index; i < end_index; i++)
       {
@@ -197,7 +194,6 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
             bits_left = 8;
           }
         }
-        // if(bits_left == 0){ // do we need to handle this case
         // Part 2: writing the number in binary
         for (int j = 0; j < 2; j++)
         {
@@ -243,7 +239,6 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
               bits_left -= local_binary_length;
               local_binary_length = 0;
             }
-            // if(bits_left == 0){ // os we need to handle this case?
           }
         }
       }

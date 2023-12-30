@@ -45,7 +45,6 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
     std::size_t thread_num = static_cast<std::size_t>(omp_get_thread_num());
     std::size_t num_threads_local = static_cast<std::size_t>(omp_get_num_threads());
     std::size_t start = thread_num * batch_size;
-    // std::cout << "thread id: " << thread_num << " num threads: " << num_threads_local << std::endl;
     while (true)
     {
       std::size_t l_sum = 0;
@@ -180,8 +179,6 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
           local_N = N_binary_length - 1;
         }
 
-        // TODO: write out all bytes in v
-        // the leftovers are still in current_byte
         T local_binary_length = 0;
         T old_local_value = 1;
         for (auto it = v.rbegin(); it != v.rend(); ++it)

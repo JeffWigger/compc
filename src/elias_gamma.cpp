@@ -45,7 +45,6 @@ compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* ar
     std::size_t thread_num = static_cast<std::size_t>(omp_get_thread_num());
     std::size_t num_threads_local = static_cast<std::size_t>(omp_get_num_threads());
     std::size_t start = thread_num * batch_size;
-    // std::cout << "thread id: " << thread_num << " num threads: " << num_threads_local << std::endl;
     while (true)
     {
       std::size_t l_sum = 0;
@@ -159,8 +158,6 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
       std::size_t start_byte = start_bit / 8;
       std::size_t end_byte = end_bit / 8;
       std::size_t index = start_byte;  // index for the byte array
-      // std::cout << "start at byte: " << index << " start bit " << start_bit << " start index " << start_index << " end
-      // index "<< end_index << std::endl;
       int bits_left = 8 - (static_cast<int>(start_bit) - static_cast<int>(start_byte) * 8);
       for (std::size_t i = start_index; i < end_index; i++)
       {
@@ -179,7 +176,7 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
           else
           {
             if (index == start_byte)
-            {  // || index == end_byte
+            {
 #pragma omp atomic
               compressed[index] = compressed[index] | current_byte;
             }
@@ -193,7 +190,6 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
             bits_left = 8;
           }
         }
-        // if(bits_left == 0){ // do we need to handle this case
         // Part 2: writing the number in binary
         while (length_binary_part > 0)
         {
@@ -223,7 +219,6 @@ uint8_t* compc::EliasGamma<T>::compress(T* input_array, std::size_t& size)
             bits_left -= length_binary_part;
             length_binary_part = 0;
           }
-          // if(bits_left == 0){ // os we need to handle this case?
         }
       }
       if (bits_left < 8)
@@ -262,9 +257,6 @@ T* compc::EliasGamma<T>::decompress(const uint8_t* array, std::size_t binary_len
       current_byte = array[binary_index];
       bits_left = 8;
     }
-    // if (binary_length < 20)
-    //   std::cout << "while 1 " << bits_left << " " << std::bitset<8>(current_byte) << " " << binary_index << " " <<
-    //   current_decoded_number << " " <<processed_bits <<  std::endl;
     uint8_t cur_copy = current_byte;
     current_byte = current_byte << (8 - bits_left);
     // TODO: process more than one bit at a time.
@@ -283,7 +275,6 @@ T* compc::EliasGamma<T>::decompress(const uint8_t* array, std::size_t binary_len
       uint8_t mask = 255u >> (8 - bits_left);
       T curT = static_cast<T>(current_byte & mask);
       bool state = (length_binary_part >= bits_left);
-      // uint8_t bits_to_process = state * bits_left + !state * length_binary_part;
       uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(length_binary_part);
       bits_left -= bits_to_process;
       length_binary_part -= bits_to_process;
