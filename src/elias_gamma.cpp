@@ -61,7 +61,7 @@ compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* ar
       for (std::size_t i = start; i < end; i++)
       {
         T elem = array[i];
-        error |= !elem; // checking for negative inputs
+        error |= !elem;  // checking for negative inputs
         // 2*N + 1
         l_sum += (static_cast<uint64_t>(hlprs::log2(static_cast<unsigned long long>(elem))) << 1) + 1;
       }
@@ -287,7 +287,7 @@ T* compc::EliasGamma<T>::decompress(const uint8_t* array, std::size_t binary_len
       uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(length_binary_part);
       bits_left -= bits_to_process;
       length_binary_part -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << length_binary_part) >> bits_left);
+      current_decoded_number = current_decoded_number | static_cast<T>((curT << length_binary_part) >> bits_left);
       reading_prefix_zeros = !length_binary_part;
       if (reading_prefix_zeros)
       {

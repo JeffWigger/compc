@@ -61,11 +61,12 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
       for (std::size_t i = start; i < end; i++)
       {
         T elem = array[i];
-        error |= !elem; // checking for negative inputs
+        error |= !elem;  // checking for negative inputs
         int N = hlprs::log2(static_cast<unsigned long long>(elem));
         // TODO: test for 0 and negative numbers
-        while (N >= 1){
-          l_sum += N + 1;
+        while (N >= 1)
+        {
+          l_sum += static_cast<std::size_t>(N + 1);
           N = hlprs::log2(static_cast<unsigned long long>(N));
         }
         l_sum++;
@@ -135,7 +136,7 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
   const uint64_t compressed_length = prefix_array[total_chunks - 1];
   const uint64_t compressed_bytes = (compressed_length + 7) / 8;  // getting the number of bytes (ceil)
   // zero initialize, otherwise there are problems at the edges of the batches
-  uint8_t* compressed = new uint8_t[compressed_bytes]();  
+  uint8_t* compressed = new uint8_t[compressed_bytes]();
 
 #pragma omp parallel shared(compressed, prefix_array) firstprivate(N) num_threads(local_threads)
   {
@@ -172,7 +173,8 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
         std::vector<T> v;
         v.push_back(0);
 
-        while (local_N > 1){
+        while (local_N > 1)
+        {
           v.push_back(local_N);
           T N_binary_length = static_cast<T>(hlprs::log2(static_cast<unsigned long long>(local_N))) + 1;
           local_N = N_binary_length - 1;
@@ -182,26 +184,31 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
         // the leftovers are still in current_byte
         T local_binary_length = 0;
         T old_local_value = 1;
-        for (auto it = v.rbegin(); it != v.rend(); ++it) {
+        for (auto it = v.rbegin(); it != v.rend(); ++it)
+        {
           T local_value = *it;
-          if (local_value == 0){
+          if (local_value == 0)
+          {
             local_binary_length = 1;
-          }else{
+          }
+          else
+          {
             local_binary_length = old_local_value + 1;
           }
           old_local_value = local_value;
 
-          while (local_binary_length){
+          while (local_binary_length)
+          {
             uint8_t mask = 255u;
             mask = mask >> (8 - bits_left);
-            if (bits_left > 0 && local_binary_length >= bits_left)
+            if (bits_left > 0 && local_binary_length >= static_cast<T>(bits_left))
             {
-              local_binary_length = local_binary_length - bits_left;
+              local_binary_length = local_binary_length - static_cast<T>(bits_left);
               current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
               bits_left = 0;
               if (index == start_byte || index == end_byte)
               {
-  #pragma omp atomic
+#pragma omp atomic
                 compressed[index] |= current_byte;
               }
               else
@@ -212,10 +219,12 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
               current_byte = 0;
               bits_left = 8;
             }
-            else if (bits_left > 0 && local_binary_length < bits_left)
+            else if (bits_left > 0 && local_binary_length < static_cast<T>(bits_left))
             {
-              current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
-              bits_left -= local_binary_length;
+              current_byte =
+                  current_byte |
+                  static_cast<uint8_t>((local_value << (bits_left - static_cast<uint8_t>(local_binary_length))) & mask);
+              bits_left -= static_cast<uint8_t>(local_binary_length);
               local_binary_length = 0;
             }
           }
@@ -248,7 +257,6 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
   uint8_t bits_left = 8;
   binary_length -= 1;
   bool read_new_number = true;
-  std::size_t to_read = 0;
   std::size_t to_read_left = 0;
   while (binary_index < binary_length || index < array_length)
   {
@@ -260,9 +268,11 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
     }
     uint8_t cur_copy = current_byte;
     current_byte = current_byte << (8 - bits_left);
-    if (read_new_number){
+    if (read_new_number)
+    {
       bool state = (current_byte >> 7);
-      if (!state){
+      if (!state)
+      {
         uncomp[index] = 1;
         index++;
         bits_left--;
@@ -270,11 +280,13 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
         continue;
       }
       read_new_number = false;
-      to_read, to_read_left = 2;
+      to_read_left = 2;
     }
-    if (to_read_left == 0){
+    if (to_read_left == 0)
+    {
       bool state = (current_byte >> 7);
-      if (!state){
+      if (!state)
+      {
         uncomp[index] = current_decoded_number;
         index++;
         bits_left--;
@@ -282,8 +294,10 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
         read_new_number = true;
         current_decoded_number = 0;
         continue;
-      }else{
-        to_read, to_read_left = current_decoded_number + 1;
+      }
+      else
+      {
+        to_read_left = static_cast<std::size_t>(current_decoded_number + 1);
         current_decoded_number = 0;
       }
     }
@@ -292,13 +306,14 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
     {
       uint8_t mask = 255u >> (8 - bits_left);
       T curT = static_cast<T>(current_byte & mask);
-      uint8_t bits_to_process = (to_read_left < bits_left) ? to_read_left : bits_left;
+      uint8_t bits_to_process =
+          (to_read_left < static_cast<std::size_t>(bits_left)) ? static_cast<uint8_t>(to_read_left) : bits_left;
       bits_left -= bits_to_process;
       to_read_left -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << to_read_left) >> bits_left);
+      current_decoded_number = current_decoded_number | static_cast<T>((curT << to_read_left) >> bits_left);
     }
   }
-  if(this->offset != 0)
+  if (this->offset != 0)
   {
     this->add_offset(uncomp, array_length, -this->offset);
   }

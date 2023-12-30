@@ -61,10 +61,10 @@ compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* ar
       for (std::size_t i = start; i < end; i++)
       {
         T elem = array[i];
-        error |= !elem; // checking for negative inputs
+        error |= !elem;  // checking for negative inputs
         int N = hlprs::log2(static_cast<unsigned long long>(elem));
-        int L = hlprs::log2(static_cast<unsigned long long>(N+1));
-        l_sum += (L << 1) + 1 + N;
+        int L = hlprs::log2(static_cast<unsigned long long>(N + 1));
+        l_sum += static_cast<std::size_t>((L << 1) + 1 + N);
       }
       local_sums[start / batch_size] = l_sum;
       start += num_threads_local * batch_size;
@@ -131,7 +131,7 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
   const uint64_t compressed_length = prefix_array[total_chunks - 1];
   const uint64_t compressed_bytes = (compressed_length + 7) / 8;  // getting the number of bytes (ceil)
   // zero initialize, otherwise there are problems at the edges of the batches
-  uint8_t* compressed = new uint8_t[compressed_bytes]();  
+  uint8_t* compressed = new uint8_t[compressed_bytes]();
 
 #pragma omp parallel shared(compressed, prefix_array) firstprivate(N) num_threads(local_threads)
   {
@@ -199,15 +199,19 @@ uint8_t* compc::EliasDelta<T>::compress(T* input_array, std::size_t& size)
         }
         // if(bits_left == 0){ // do we need to handle this case
         // Part 2: writing the number in binary
-        for(int i = 0; i < 2; i++){
+        for (int j = 0; j < 2; j++)
+        {
           T local_value;
           int local_binary_length;
-          if (i == 1){
+          if (j == 1)
+          {
             local_value = value;
             local_binary_length = length_binary_part;
             // the leading 1 is not written
             local_value = local_value ^ (1 << local_binary_length);
-          }else{
+          }
+          else
+          {
             local_value = static_cast<T>(local_N_1);
             local_binary_length = length_infix_part;
           }
@@ -297,12 +301,15 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
 
     while (!reading_prefix_zeros && bits_left > 0)
     {
-      int local_binary_length; 
+      uint local_binary_length;
       bool start_state_infix = true;
       reading_infix = length_infix_part > 0;
-      if (reading_infix){
+      if (reading_infix)
+      {
         local_binary_length = length_infix_part;
-      } else {
+      }
+      else
+      {
         local_binary_length = length_suffix_part;
         start_state_infix = false;
       }
@@ -310,17 +317,21 @@ T* compc::EliasDelta<T>::decompress(const uint8_t* array, std::size_t binary_len
       T curT = static_cast<T>(current_byte & mask);
       bool state = (local_binary_length >= bits_left);
       uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(local_binary_length);
-      bits_left -= bits_to_process;
+      bits_left -= static_cast<uint>(bits_to_process);
       local_binary_length -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << local_binary_length) >> bits_left);
-      if (reading_infix){
+      current_decoded_number = current_decoded_number | static_cast<T>((curT << local_binary_length) >> bits_left);
+      if (reading_infix)
+      {
         length_infix_part = local_binary_length;
-      } else {
+      }
+      else
+      {
         length_suffix_part = local_binary_length;
       }
       reading_infix = length_infix_part > 0;
-      if (!reading_infix && start_state_infix){
-        length_suffix_part = current_decoded_number;
+      if (!reading_infix && start_state_infix)
+      {
+        length_suffix_part = static_cast<uint>(current_decoded_number);
         // inserting the implied leading 1
         length_suffix_part--;
         current_decoded_number = 1 << length_suffix_part;
