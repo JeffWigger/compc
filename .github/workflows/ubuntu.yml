@@ -16,14 +16,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4.1.1
       
     - name: cache dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4.1.1
       id: cache
       with:
         path: ${{ github.workspace }}/${{ env.INSTALL_LOCATION }}
         key: ${{ runner.os }}-dependencies
+  
+    - name: install openmp
+      run: apt install libomp-dev 
 
     - name: install GoogleTest
       if: ${{ steps.cache.output.cache-hit != 'true' }}
