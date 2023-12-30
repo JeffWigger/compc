@@ -64,7 +64,7 @@ testAddress: ## run tests quickly with ctest
 
 testMemory: ## run tests quickly with ctest
 	# test not used as we deleiberately use undefined memory for performance reasons. 
-	# add -fsanitize-memory-track-origins for the pritns to make more sense.
+	# add -fsanitize-memory-track-origins for the prints to make more sense.
 	rm -rf build/
 	# only available with clang++
 	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=clang++ -Dcompc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=memory

@@ -41,6 +41,7 @@ TEST(Elias_Omega_Unit_Encode, CheckValues)
     std::cout << std::bitset<8>(comp[i])  << std::endl;
     ASSERT_EQ(output[i], comp[i]);
   }
+  delete [] comp;
 }
 
 
@@ -55,6 +56,8 @@ TEST(Elias_Omega_Unit_Decode, CheckValues)
     std::cout << res[i]  << std::endl;
     ASSERT_EQ(output[i], res[i]);
   }
+
+  delete [] res;
 }
 
 
