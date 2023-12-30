@@ -169,68 +169,55 @@ uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
       {
         T local_N = array[i];
         // unrolling recursive definition of omega coding
-        std::vector<uint8_t> v;
-        uint8_t local_byte = 0;
-        int local_bits_left = 7; // writting the 0
+        std::vector<T> v;
+        v.push_back(0);
 
         while (local_N > 1){
+          v.push_back(local_N);
           T N_binary_length = static_cast<T>(hlprs::log2(static_cast<unsigned long long>(local_N))) + 1;
-          T local_binary_length = N_binary_length;
-          while (local_binary_length > 0)
-          {
-            uint8_t mask = 255u;
-            mask = mask >> (8 - local_bits_left);
-            if (local_bits_left > 0 && local_binary_length >= local_bits_left)
-            {
-              local_binary_length -= local_bits_left;
-              local_byte = local_byte | static_cast<uint8_t>((local_N >> local_binary_length) & mask);
-              v.push_back(local_byte);
-              local_byte = 0;
-              local_bits_left = 8;
-            }
-            else if (local_bits_left > 0 && local_binary_length < local_bits_left)
-            {
-              local_byte = local_byte | static_cast<uint8_t>((local_N << (local_bits_left - local_binary_length)) & mask);
-              local_bits_left -= local_binary_length;
-              local_binary_length = 0;
-            }
-          }
-          local_N = local_binary_length - 1;
+          local_N = N_binary_length - 1;
         }
-        
+
         // TODO: write out all bytes in v
         // the leftovers are still in current_byte
-        T local_binary_length = 8 - static_cast<T>(local_bits_left);
-        uint8_t local_value = local_byte 
-        while(!v.empty()){
-          if (local_binary_length == 0){
-            local_value = v.pop_back();
+        T local_binary_length = 0;
+        T old_local_value = 1;
+        for (auto it = v.rbegin(); it != v.rend(); ++it) {
+          T local_value = *it;
+          if (local_value == 0){
+            local_binary_length = 1;
+          }else{
+            local_binary_length = old_local_value + 1;
           }
-          uint8_t mask = 255u;
-          mask = mask >> (8 - bits_left);
-          if (bits_left > 0 && local_binary_length >= bits_left)
-          {
-            local_binary_length = local_binary_length - bits_left;
-            current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
-            bits_left = 0;
-            if (index == start_byte || index == end_byte)
+          old_local_value = local_value;
+
+          while (local_binary_length){
+            uint8_t mask = 255u;
+            mask = mask >> (8 - bits_left);
+            if (bits_left > 0 && local_binary_length >= bits_left)
             {
-#pragma omp atomic
-              compressed[index] |= current_byte;
+              local_binary_length = local_binary_length - bits_left;
+              current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
+              bits_left = 0;
+              if (index == start_byte || index == end_byte)
+              {
+  #pragma omp atomic
+                compressed[index] |= current_byte;
+              }
+              else
+              {
+                compressed[index] = current_byte;
+              }
+              index++;
+              current_byte = 0;
+              bits_left = 8;
             }
-            else
+            else if (bits_left > 0 && local_binary_length < bits_left)
             {
-              compressed[index] = current_byte;
+              current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
+              bits_left -= local_binary_length;
+              local_binary_length = 0;
             }
-            index++;
-            current_byte = 0;
-            bits_left = 8;
-          }
-          else if (bits_left > 0 && local_binary_length < bits_left)
-          {
-            current_byte = current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
-            bits_left -= local_binary_length;
-            local_binary_length = 0;
           }
         }
       }
@@ -256,14 +243,13 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
   T* uncomp = new T[array_length];
   std::size_t index = 0;
   T current_decoded_number = 0;
-  uint length_infix_part = 0;
-  uint length_suffix_part = 0;
-  bool reading_prefix_zeros = true;
-  bool reading_infix = true;
   std::size_t binary_index = 0;
   uint8_t current_byte = array[binary_index];
   uint8_t bits_left = 8;
   binary_length -= 1;
+  bool read_new_number = true;
+  std::size_t to_read = 0;
+  std::size_t to_read_left = 0;
   while (binary_index < binary_length || index < array_length)
   {
     if (bits_left == 0)
@@ -274,58 +260,45 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
     }
     uint8_t cur_copy = current_byte;
     current_byte = current_byte << (8 - bits_left);
-    // TODO: process more than one bit at a time.
-    while (reading_prefix_zeros && bits_left > 0)
-    {
-      // check if the current position we are reading is a 1
-      bool state = !(current_byte >> 7);  // is either 0, or 1
-      current_byte = current_byte << state;
-      bits_left -= state;
-      reading_prefix_zeros = state;
-      length_infix_part++;
+    if (read_new_number){
+      bool state = (current_byte >> 7);
+      if (!state){
+        uncomp[index] = 1;
+        index++;
+        bits_left--;
+        current_byte = cur_copy;
+        continue;
+      }
+      read_new_number = false;
+      to_read, to_read_left = 2;
     }
-    current_byte = cur_copy;
-
-    while (!reading_prefix_zeros && bits_left > 0)
-    {
-      int local_binary_length; 
-      bool start_state_infix = true;
-      reading_infix = length_infix_part > 0;
-      if (reading_infix){
-        local_binary_length = length_infix_part;
-      } else {
-        local_binary_length = length_suffix_part;
-        start_state_infix = false;
-      }
-      uint8_t mask = 255u >> (8 - bits_left);
-      T curT = static_cast<T>(current_byte & mask);
-      bool state = (local_binary_length >= bits_left);
-      uint8_t bits_to_process = (state) ? bits_left : static_cast<uint8_t>(local_binary_length);
-      bits_left -= bits_to_process;
-      local_binary_length -= bits_to_process;
-      current_decoded_number = current_decoded_number | ((curT << local_binary_length) >> bits_left);
-      if (reading_infix){
-        length_infix_part = local_binary_length;
-      } else {
-        length_suffix_part = local_binary_length;
-      }
-      reading_infix = length_infix_part > 0;
-      if (!reading_infix && start_state_infix){
-        length_suffix_part = current_decoded_number;
-        // inserting the implied leading 1
-        length_suffix_part--;
-        current_decoded_number = 1 << length_suffix_part;
-      }
-      reading_prefix_zeros = !length_suffix_part && !reading_infix;
-      if (reading_prefix_zeros)
-      {
+    if (to_read_left == 0){
+      bool state = (current_byte >> 7);
+      if (!state){
         uncomp[index] = current_decoded_number;
         index++;
-        current_decoded_number = 0u;
+        bits_left--;
+        current_byte = cur_copy;
+        read_new_number = true;
+        current_decoded_number = 0;
+        continue;
+      }else{
+        to_read, to_read_left = current_decoded_number + 1;
+        current_decoded_number = 0;
       }
     }
+    current_byte = cur_copy;
+    while (to_read_left && bits_left)
+    {
+      uint8_t mask = 255u >> (8 - bits_left);
+      T curT = static_cast<T>(current_byte & mask);
+      uint8_t bits_to_process = (to_read_left < bits_left) ? to_read_left : bits_left;
+      bits_left -= bits_to_process;
+      to_read_left -= bits_to_process;
+      current_decoded_number = current_decoded_number | ((curT << to_read_left) >> bits_left);
+    }
   }
-  if (this->offset != 0)
+  if(this->offset != 0)
   {
     this->add_offset(uncomp, array_length, -this->offset);
   }
