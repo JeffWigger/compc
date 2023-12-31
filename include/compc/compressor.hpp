@@ -27,7 +27,7 @@ namespace compc
       std::cout << "OMP threads=" << this->num_threads << std::endl;
     };
     virtual ~Compressor() = default;
-    virtual uint8_t* compress(T*, std::size_t&) = 0;
+    virtual uint8_t* compress(const T*, std::size_t&) = 0;
     virtual T* decompress(const uint8_t*, std::size_t, std::size_t) = 0;
     virtual std::size_t get_compressed_length(const T*, std::size_t) = 0;
     int num_threads{ 1 };
