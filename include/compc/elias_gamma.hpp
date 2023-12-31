@@ -15,7 +15,7 @@ namespace compc
     EliasGamma(T zero_offset, bool map_negative_numbers_to_positive)
         : EliasBase<T>(zero_offset, map_negative_numbers_to_positive){};
     ~EliasGamma() = default;
-    uint8_t* compress(T*, std::size_t&) override;
+    uint8_t* compress(const T*, std::size_t&) override;
     T* decompress(const uint8_t*, std::size_t, std::size_t) override;
     std::size_t get_compressed_length(const T*, std::size_t) override;
     ArrayPrefixSummary get_prefix_sum_array(const T*, std::size_t) override;

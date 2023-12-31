@@ -88,28 +88,28 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
 }
 
 template<typename T>
-uint8_t* compc::EliasOmega<T>::compress(T* input_array, std::size_t& size)
+uint8_t* compc::EliasOmega<T>::compress(const T* input_array, std::size_t& size)
 {
   const uint64_t N = size;
-  T* array;
+  const T* array;
   bool not_transformed = true;
   if (this->map_negative_numbers)
   {
     T* heap_copy_array = new T[size];
-    std::memcpy(static_cast<void*>(heap_copy_array), static_cast<void*>(input_array), size * sizeof(T));
+    std::memcpy(static_cast<void*>(heap_copy_array), static_cast<const void*>(input_array), size * sizeof(T));
     this->transform_to_natural_numbers(heap_copy_array, size);
+    if (this->offset != 0){
+      this->add_offset(heap_copy_array, size, this->offset);
+    }
     array = heap_copy_array;
     not_transformed = false;
   }
-  if (this->offset != 0)
+  if (not_transformed && this->offset != 0)
   {
-    if (not_transformed)
-    {
-      T* heap_copy_array = new T[size];
-      std::memcpy(static_cast<void*>(heap_copy_array), static_cast<void*>(input_array), size * sizeof(T));
-      array = heap_copy_array;
-    }
-    this->add_offset(array, size, this->offset);
+    T* heap_copy_array = new T[size];
+    std::memcpy(static_cast<void*>(heap_copy_array), static_cast<const void*>(input_array), size * sizeof(T));
+    this->add_offset(heap_copy_array, size, this->offset);
+    array = heap_copy_array;
     not_transformed = false;
   }
   if (not_transformed)
