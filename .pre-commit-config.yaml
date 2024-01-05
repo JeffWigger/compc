@@ -23,7 +23,7 @@ repos:
   rev: v1.5.4
   hooks:
   - id: remove-tabs
-    exclude: ^(docs)
+    exclude: Makefile
 
 # CMake formatting
 - repo: https://github.com/cheshirekow/cmake-format-precommit
