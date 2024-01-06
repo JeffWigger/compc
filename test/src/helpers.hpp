@@ -1,7 +1,7 @@
 #ifndef COMPC_TESTS_HELPERS_H_
 #define COMPC_TESTS_HELPERS_H_
 #include <cstdint>
-#include <stdlib.h>
+#include <cstdlib>
 namespace compc_test {
 template <typename T> T* get_random_array(std::size_t length);
 }

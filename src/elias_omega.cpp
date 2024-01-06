@@ -1,6 +1,6 @@
 #include "compc/elias_omega.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <omp.h>
 
 #include <bitset>
@@ -21,8 +21,8 @@ template <typename T>
 compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* array, std::size_t length) {
   int local_threads = this->num_threads;
   uint32_t batch_size = this->batch_size_small;
-  ;
-  if (length < batch_size * static_cast<uint32_t>(local_threads)) { // inefficient for lenght close this
+  // inefficient for lenght close this
+  if (length < static_cast<std::size_t>(batch_size) * static_cast<std::size_t>(local_threads)) {
     local_threads = static_cast<int>((length + batch_size - 1) / batch_size);
   } else if (length >= 2 * this->batch_size_large * static_cast<uint32_t>(this->num_threads)) {
     batch_size = this->batch_size_large;
@@ -33,11 +33,12 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
   bool error = false;
 
 // manual implemenation of a omp for in order to prevent cache thrashing!
-#pragma omp parallel shared(local_sums, error) num_threads(local_threads)
+#pragma omp parallel default(none) shared(local_sums, error, array) firstprivate(batch_size, length)                   \
+    num_threads(local_threads)
   {
     bool error_local = false;
-    std::size_t thread_num = static_cast<std::size_t>(omp_get_thread_num());
-    std::size_t num_threads_local = static_cast<std::size_t>(omp_get_num_threads());
+    auto thread_num = static_cast<std::size_t>(omp_get_thread_num());
+    auto num_threads_local = static_cast<std::size_t>(omp_get_num_threads());
     std::size_t start = thread_num * batch_size;
     while (true) {
       std::size_t l_sum = 0;
@@ -48,6 +49,7 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
       if (end > length) {
         end = length;
       }
+      //#pragma omp unroll partial(4)
       for (std::size_t i = start; i < end; i++) {
         T elem = array[i];
         error |= !elem; // checking for negative inputs
@@ -68,17 +70,18 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
   // final serial loop to create prefix
   // untroll --> takes almost no time, not worth it.
   std::size_t i_low = 0;
+  //#pragma omp unroll partial(4)
   for (std::size_t i = 1; i < total_chunks; i++) {
     local_sums[i] += local_sums[i_low];
     i_low = i;
   }
-  return compc::ArrayPrefixSummary{local_threads, local_sums, batch_size, total_chunks,
+  return compc::ArrayPrefixSummary{local_threads, batch_size, local_sums, total_chunks,
                                    error}; // this should use elision
 }
 
 template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_array, std::size_t& size) {
   const uint64_t N = size;
-  const T* array;
+  const T* array = nullptr;
   bool not_transformed = true;
   if (this->map_negative_numbers) {
     T* heap_copy_array = new T[size];
@@ -118,12 +121,13 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
   const uint64_t compressed_length = prefix_array[total_chunks - 1];
   const uint64_t compressed_bytes = (compressed_length + 7) / 8; // getting the number of bytes (ceil)
   // zero initialize, otherwise there are problems at the edges of the batches
-  uint8_t* compressed = new uint8_t[compressed_bytes]();
+  auto* compressed = new uint8_t[compressed_bytes]();
 
-#pragma omp parallel shared(compressed, prefix_array) firstprivate(N) num_threads(local_threads)
+#pragma omp parallel default(none) shared(compressed, prefix_array, array) firstprivate(N, total_chunks, batch_size)   \
+    num_threads(local_threads)
   {
-    std::size_t start_bit;
-    std::size_t start_index;
+    std::size_t start_bit = 0;
+    std::size_t start_index = 0;
 #pragma omp for schedule(dynamic, batch_size)
     for (uint32_t round = 0; round < total_chunks; round++) {
       uint8_t current_byte = 0;
@@ -132,7 +136,7 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
         start_index = 0;
       } else {
         start_bit = prefix_array[round - 1];
-        start_index = round * batch_size;
+        start_index = static_cast<std::size_t>(round) * static_cast<std::size_t>(batch_size);
       }
       std::size_t end_bit = prefix_array[round];
       std::size_t end_index = start_index + batch_size;
@@ -142,7 +146,7 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
       std::size_t start_byte = start_bit / 8;
       std::size_t end_byte = end_bit / 8;
       std::size_t index = start_byte; // index for the byte array
-      int bits_left = 8 - (static_cast<int>(start_bit) - static_cast<int>(start_byte) * 8);
+      uint bits_left = 8 - (static_cast<uint>(start_bit) - static_cast<uint>(start_byte) * 8);
       for (std::size_t i = start_index; i < end_index; i++) {
         T local_N = array[i];
         // unrolling recursive definition of omega coding
@@ -167,8 +171,8 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
           old_local_value = local_value;
 
           while (local_binary_length) {
-            uint8_t mask = 255u;
-            mask = mask >> (8 - bits_left);
+            uint8_t mask = 255U;
+            mask = mask >> (8U - bits_left);
             if (bits_left > 0 && local_binary_length >= static_cast<T>(bits_left)) {
               local_binary_length = local_binary_length - static_cast<T>(bits_left);
               current_byte = current_byte | static_cast<uint8_t>((local_value >> local_binary_length) & mask);
@@ -223,9 +227,9 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
       bits_left = 8;
     }
     uint8_t cur_copy = current_byte;
-    current_byte = current_byte << (8 - bits_left);
+    current_byte = current_byte << (8U - bits_left);
     if (read_new_number) {
-      bool state = (current_byte >> 7);
+      bool state = (current_byte >> 7U);
       if (!state) {
         uncomp[index] = 1;
         index++;
@@ -237,7 +241,7 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
       to_read_left = 2;
     }
     if (to_read_left == 0) {
-      bool state = (current_byte >> 7);
+      bool state = (current_byte >> 7U);
       if (!state) {
         uncomp[index] = current_decoded_number;
         index++;
@@ -246,14 +250,13 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
         read_new_number = true;
         current_decoded_number = 0;
         continue;
-      } else {
-        to_read_left = static_cast<std::size_t>(current_decoded_number + 1);
-        current_decoded_number = 0;
       }
+      to_read_left = static_cast<std::size_t>(current_decoded_number + 1);
+      current_decoded_number = 0;
     }
     current_byte = cur_copy;
     while (to_read_left && bits_left) {
-      uint8_t mask = 255u >> (8 - bits_left);
+      uint8_t mask = 255U >> (8U - bits_left);
       T curT = static_cast<T>(current_byte & mask);
       uint8_t bits_to_process =
           (to_read_left < static_cast<std::size_t>(bits_left)) ? static_cast<uint8_t>(to_read_left) : bits_left;

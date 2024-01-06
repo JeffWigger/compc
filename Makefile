@@ -108,3 +108,8 @@ format: ## format the project sources
 	rm -rf build/
 	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION)
 	cmake --build build --target clang-format
+
+tidy: ## format the project sources
+	rm -rf build/
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	cmake --build build --target clang-tidy

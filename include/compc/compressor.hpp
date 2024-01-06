@@ -1,13 +1,14 @@
 #ifndef COMPC_COMPRESSOR_H_
 #define COMPC_COMPRESSOR_H_
+#include <cstdlib>
 #include <omp.h>
-#include <stdlib.h>
 
 #include <cstdint>
 namespace compc {
 
 template <typename T> class Compressor {
 public:
+  int num_threads{1};
   Compressor() {
     char* num_threads_char = std::getenv("OMP_NUM_THREADS");
     if (num_threads_char != nullptr) {
@@ -18,11 +19,27 @@ public:
     }
     omp_set_num_threads(this->num_threads);
   };
+  explicit Compressor(int number_of_threads) : num_threads(number_of_threads) {
+    omp_set_num_threads(this->num_threads);
+  };
   virtual ~Compressor() = default;
   virtual uint8_t* compress(const T*, std::size_t&) = 0;
   virtual T* decompress(const uint8_t*, std::size_t, std::size_t) = 0;
   virtual std::size_t get_compressed_length(const T*, std::size_t) = 0;
-  int num_threads{1};
+  // copy cunstructor
+  Compressor(Compressor& other) : Compressor(other.num_threads){};
+  // move cunstructor
+  Compressor(Compressor&& other) noexcept // move constructor
+      : num_threads(std::exchange(other.num_threads, 0)){};
+  // copy operator
+  Compressor& operator=(Compressor other) {
+    *this = Compressor(other);
+    return *this;
+  };
+  Compressor& operator=(Compressor&& other) noexcept {
+    num_threads = std::move(other.num_threads);
+    return *this;
+  };
 
   void transform_to_natural_numbers(T* array, const std::size_t& size)
   /*
@@ -39,7 +56,9 @@ public:
     if (size < static_cast<std::size_t>(local_threads)) {
       local_threads = 1;
     }
-#pragma omp parallel for schedule(guided, 1000) shared(array) firstprivate(size) num_threads(local_threads)
+#pragma omp parallel for schedule(guided, 1000) default(none) shared(array) firstprivate(size)                         \
+    num_threads(local_threads)
+    // #pragma omp unroll partial(4)
     for (std::size_t i = 0; i < size; i++) {
       T at_i = array[i];
       T bi = (at_i < 0);
@@ -62,7 +81,9 @@ public:
     if (size < static_cast<std::size_t>(local_threads)) {
       local_threads = 1;
     }
-#pragma omp parallel for schedule(guided, 1000) shared(array) firstprivate(size) num_threads(local_threads)
+#pragma omp parallel for schedule(guided, 1000) default(none) shared(array) firstprivate(size)                         \
+    num_threads(local_threads)
+    // #pragma omp unroll partial(4)
     for (std::size_t i = 0; i < size; i++) {
       T at_i = array[i];
       T bi = (at_i % 2);
@@ -75,7 +96,9 @@ public:
     if (size < static_cast<std::size_t>(local_threads)) {
       local_threads = 1;
     }
-#pragma omp parallel for schedule(guided, 1000) shared(array) firstprivate(size) num_threads(local_threads)
+#pragma omp parallel for schedule(guided, 1000) default(none) shared(array) firstprivate(size, offset)                 \
+    num_threads(local_threads)
+    // #pragma omp unroll partial(4)
     for (std::size_t i = 0; i < size; i++) {
       array[i] = array[i] + offset;
     }
