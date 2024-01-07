@@ -54,8 +54,8 @@ compc::ArrayPrefixSummary compc::EliasDelta<T>::get_prefix_sum_array(const T* ar
       for (std::size_t i = start; i < end; i++) {
         T elem = array[i];
         error |= !elem; // checking for negative inputs
-        int N = hlprs::log2(static_cast<unsigned long long>(elem));
-        uint L = static_cast<uint>(hlprs::log2(N + 1));
+        uint N = static_cast<uint>(hlprs::log2(static_cast<unsigned long long>(elem)));
+        uint L = static_cast<uint>(hlprs::log2(static_cast<unsigned long long>(N + 1)));
         l_sum += static_cast<std::size_t>((L << 1U) + 1 + N);
       }
       local_sums[start / batch_size] = l_sum;
@@ -82,30 +82,11 @@ std::unique_ptr<uint8_t[]> compc::EliasDelta<T>::compress(const T* input_array, 
   const T* array = nullptr;
   std::unique_ptr<T[]> heap_copy_array; // TODO change to make_unique_for_overwrite
   if (this->map_negative_numbers || this->offset != 0) {
-    heap_copy_array = std::move(std::unique_ptr<T[]>(new T[size]));
-  }
-  bool not_transformed = true;
-  if (this->map_negative_numbers) {
-    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
-    this->transform_to_natural_numbers(heap_copy_array.get(), size);
-    if (this->offset != 0) {
-      this->add_offset(heap_copy_array.get(), size, this->offset);
-    }
+    heap_copy_array = this->transform_array_inputs(input_array, size);
     array = heap_copy_array.get();
-    not_transformed = false;
-  }
-  if (not_transformed && this->offset != 0) {
-    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
-    this->add_offset(heap_copy_array.get(), size, this->offset);
-    array = heap_copy_array.get();
-    not_transformed = false;
-  }
-  if (not_transformed) {
-    // For performance reasons we only copy the array in case
-    // map_negative_numbers is true;
+  } else {
     array = input_array;
   }
-
   ArrayPrefixSummary prefix_tuple = this->get_prefix_sum_array(array, N); // in bits
   if (prefix_tuple.error) {
     return nullptr;
@@ -178,7 +159,7 @@ std::unique_ptr<uint8_t[]> compc::EliasDelta<T>::compress(const T* input_array, 
             local_value = value;
             local_binary_length = length_binary_part;
             // the leading 1 is not written
-            local_value = local_value ^ (1U << local_binary_length);
+            local_value = local_value ^ static_cast<T>((1U << local_binary_length));
           } else {
             local_value = static_cast<T>(local_N_1);
             local_binary_length = length_infix_part;
@@ -201,8 +182,9 @@ std::unique_ptr<uint8_t[]> compc::EliasDelta<T>::compress(const T* input_array, 
               bits_left = 8;
             } else if (bits_left > 0 && local_binary_length < bits_left) {
               current_byte =
-                  current_byte | static_cast<uint8_t>((local_value << (bits_left - local_binary_length)) & mask);
-              bits_left -= local_binary_length;
+                  current_byte |
+                  static_cast<uint8_t>((local_value << (bits_left - static_cast<uint8_t>(local_binary_length))) & mask);
+              bits_left -= static_cast<uint8_t>(local_binary_length);
               local_binary_length = 0;
             }
           }
@@ -278,7 +260,7 @@ std::unique_ptr<T[]> compc::EliasDelta<T>::decompress(const uint8_t* array, std:
         length_suffix_part = static_cast<uint>(current_decoded_number);
         // inserting the implied leading 1
         length_suffix_part--;
-        current_decoded_number = 1 << length_suffix_part;
+        current_decoded_number = 1U << length_suffix_part;
       }
       reading_prefix_zeros = !length_suffix_part && !reading_infix;
       if (reading_prefix_zeros) {

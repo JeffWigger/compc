@@ -60,7 +60,7 @@ TEST(Elias_Omega_DecompCompEQTestLong, CheckValues) {
     std::cout << std::bitset<8>(comp[i]) << std::endl;
   std::unique_ptr<long[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
-  for (int i = 0; i < 10; i++) {
+  for (std::size_t i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
 }
@@ -99,7 +99,7 @@ TEST(Elias_Omega_DecompCompEQTestInt, CheckValues) {
 
   std::unique_ptr<int[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
-  for (int i = 0; i < 10; i++) {
+  for (std::size_t i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
 }
@@ -113,7 +113,7 @@ TEST(Elias_Omega_DecompCompEQTestShort, CheckValues) {
 
   std::unique_ptr<short[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
-  for (int i = 0; i < 10; i++) {
+  for (std::size_t i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
 }
@@ -228,7 +228,7 @@ TEST(Elias_Omega_DecompCompEQTestNegativeLong, CheckValues) {
   ASSERT_EQ(elias.offset, 1);
   std::unique_ptr<uint8_t[]> comp = elias.compress(input, size);
   std::unique_ptr<long[]> output = elias.decompress(comp.get(), size, 10);
-  for (int i = 0; i < 10; i++) {
+  for (std::size_t i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
 }

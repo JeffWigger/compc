@@ -55,7 +55,7 @@ compc::ArrayPrefixSummary compc::EliasGamma<T>::get_prefix_sum_array(const T* ar
         T elem = array[i];
         error |= !elem; // checking for negative inputs
         // 2*N + 1
-        l_sum += (static_cast<uint64_t>(hlprs::log2(static_cast<unsigned long long>(elem))) << 1) + 1;
+        l_sum += (static_cast<uint64_t>(hlprs::log2(static_cast<unsigned long long>(elem))) << 1U) + 1;
       }
       local_sums[start / batch_size] = l_sum;
       start += num_threads_local * batch_size;
@@ -81,30 +81,11 @@ std::unique_ptr<uint8_t[]> compc::EliasGamma<T>::compress(const T* input_array, 
   const T* array = nullptr;
   std::unique_ptr<T[]> heap_copy_array; // TODO change to make_unique_for_overwrite
   if (this->map_negative_numbers || this->offset != 0) {
-    heap_copy_array = std::move(std::unique_ptr<T[]>(new T[size]));
-  }
-  bool not_transformed = true;
-  if (this->map_negative_numbers) {
-    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
-    this->transform_to_natural_numbers(heap_copy_array.get(), size);
-    if (this->offset != 0) {
-      this->add_offset(heap_copy_array.get(), size, this->offset);
-    }
+    heap_copy_array = this->transform_array_inputs(input_array, size);
     array = heap_copy_array.get();
-    not_transformed = false;
-  }
-  if (not_transformed && this->offset != 0) {
-    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
-    this->add_offset(heap_copy_array.get(), size, this->offset);
-    array = heap_copy_array.get();
-    not_transformed = false;
-  }
-  if (not_transformed) {
-    // For performance reasons we only copy the array in case
-    // map_negative_numbers is true;
+  } else {
     array = input_array;
   }
-
   ArrayPrefixSummary prefix_tuple = this->get_prefix_sum_array(array, N); // in bits
   if (prefix_tuple.error) {
     return nullptr;

@@ -2,7 +2,9 @@
 #define COMPC_ELIAS_BASE_H_
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
+#include <memory>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -39,6 +41,28 @@ public:
   // copy operator
   EliasBase& operator=(const EliasBase& other) = default;
   EliasBase& operator=(EliasBase&& other) noexcept = default;
+
+protected:
+  std::unique_ptr<T[]> transform_array_inputs(const T* input_array, std::size_t& size) {
+    std::unique_ptr<T[]> heap_copy_array = nullptr; // TODO change to make_unique_for_overwrite
+    if (this->map_negative_numbers || this->offset != 0) {
+      heap_copy_array = std::move(std::unique_ptr<T[]>(new T[size]));
+    }
+    bool not_transformed = true;
+    if (this->map_negative_numbers) {
+      std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
+      this->transform_to_natural_numbers(heap_copy_array.get(), size);
+      if (this->offset != 0) {
+        this->add_offset(heap_copy_array.get(), size, this->offset);
+      }
+      not_transformed = false;
+    }
+    if (not_transformed && this->offset != 0) {
+      std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
+      this->add_offset(heap_copy_array.get(), size, this->offset);
+    }
+    return heap_copy_array;
+  }
 };
 } // namespace compc
 

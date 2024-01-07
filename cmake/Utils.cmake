@@ -64,7 +64,9 @@ function(add_clang_tidy_target)
       -cppcoreguidelines-init-variables, # Broken at the moment
       -altera-id-dependent-backward-branch,
       -altera-unroll-loops, # currently not supported in gcc
-      -bugprone-easily-swappable-parameters)
+      -bugprone-easily-swappable-parameters,
+      -bugprone-branch-clone,
+      -readability-function-cognitive-complexity)
   message(IGNORED_CHECKS=${IGNORED_CHECKS})
 
   if(${PROJECT_NAME}_CLANG_TIDY_BINARY)
