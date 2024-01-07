@@ -32,14 +32,8 @@ public:
   Compressor(Compressor&& other) noexcept // move constructor
       : num_threads(std::exchange(other.num_threads, 0)){};
   // copy operator
-  Compressor& operator=(Compressor other) {
-    *this = Compressor(other);
-    return *this;
-  };
-  Compressor& operator=(Compressor&& other) noexcept {
-    num_threads = std::move(other.num_threads);
-    return *this;
-  };
+  Compressor& operator=(const Compressor& other) = default;
+  Compressor& operator=(Compressor&& other) noexcept = default;
 
   void transform_to_natural_numbers(T* array, const std::size_t& size)
   /*

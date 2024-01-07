@@ -37,16 +37,8 @@ public:
       : Compressor<T>(other), offset(std::exchange(other.offset, 0)),
         map_negative_numbers(std::exchange(other.map_negative_numbers, false)){};
   // copy operator
-  EliasBase& operator=(EliasBase other) {
-    *this = EliasBase(other);
-    return *this;
-  };
-  EliasBase& operator=(EliasBase&& other) noexcept {
-    Compressor<T>::operator=(std::forward(other));
-    offset = std::move(other.offset);
-    map_negative_numbers = std::move(other.map_negative_numbers);
-    return *this;
-  };
+  EliasBase& operator=(const EliasBase& other) = default;
+  EliasBase& operator=(EliasBase&& other) noexcept = default;
 };
 } // namespace compc
 
