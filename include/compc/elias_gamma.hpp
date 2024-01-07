@@ -1,6 +1,7 @@
 #ifndef COMPC_ELIAS_GAMMA_H_
 #define COMPC_ELIAS_GAMMA_H_
 #include <cstdint>
+#include <memory>
 #include <tuple>
 
 #include "compc/elias_base.hpp"
@@ -18,15 +19,15 @@ public:
       : EliasBase<T>(zero_offset, map_negative_numbers_to_positive), batch_size_small(batch_size_small_p),
         batch_size_large(batch_size_large_p){};
   ~EliasGamma() = default;
-  uint8_t* compress(const T*, std::size_t&) override;
-  T* decompress(const uint8_t*, std::size_t, std::size_t) override;
+  std::unique_ptr<uint8_t[]> compress(const T*, std::size_t&) override;
+  std::unique_ptr<T[]> decompress(const uint8_t*, std::size_t, std::size_t) override;
   std::size_t get_compressed_length(const T*, std::size_t) override;
   ArrayPrefixSummary get_prefix_sum_array(const T*, std::size_t) override;
   // copy constructor
   EliasGamma(EliasGamma& other)
       : EliasBase<T>(other), batch_size_small(other.batch_size_small), batch_size_large(other.batch_size_large){};
   // move constructor
-  EliasGamma(EliasGamma&& other) noexcept // move constructor
+  EliasGamma(EliasGamma&& other) noexcept
       : EliasBase<T>(other), batch_size_small(std::exchange(batch_size_small, 0)),
         batch_size_large(std::exchange(batch_size_large, 0)){};
   // copy operator

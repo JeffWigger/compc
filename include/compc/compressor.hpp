@@ -4,6 +4,7 @@
 #include <omp.h>
 
 #include <cstdint>
+#include <memory>
 namespace compc {
 
 template <typename T> class Compressor {
@@ -23,8 +24,8 @@ public:
     omp_set_num_threads(this->num_threads);
   };
   virtual ~Compressor() = default;
-  virtual uint8_t* compress(const T*, std::size_t&) = 0;
-  virtual T* decompress(const uint8_t*, std::size_t, std::size_t) = 0;
+  virtual std::unique_ptr<uint8_t[]> compress(const T*, std::size_t&) = 0;
+  virtual std::unique_ptr<T[]> decompress(const uint8_t*, std::size_t, std::size_t) = 0;
   virtual std::size_t get_compressed_length(const T*, std::size_t) = 0;
   // copy cunstructor
   Compressor(Compressor& other) : Compressor(other.num_threads){};

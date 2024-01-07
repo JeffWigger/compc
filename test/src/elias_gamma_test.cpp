@@ -11,31 +11,29 @@ TEST(Elias_Gamma_DecompCompEQTestLong, CheckValues) {
   long input[10] = {1, 3, 2000, 2, 50, 1, 25345, 11, 10000000, 1};
   compc::EliasGamma<long> elias;
   std::cout << "size: " << sizeof(input) << std::endl;
-  uint8_t* comp = elias.compress(input, size);
+  std::unique_ptr<uint8_t[]> comp = elias.compress(input, size);
 
   std::cout << "binary size: " << size << std::endl;
   for (std::size_t i = 0; i < size; i++)
     std::cout << std::bitset<8>(comp[i]) << std::endl;
-  long* output = elias.decompress(comp, size, 10);
+  std::unique_ptr<long[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
   for (int i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
-  delete[] comp;
-  delete[] output;
 }
 
 TEST(Elias_Gamma_SpeedTestLong, CheckValues) {
   std::size_t len = 500000;
   std::size_t len_copy = len;
-  long* random_array = compc_test::get_random_array<long>(len);
+  auto random_array = compc_test::get_random_array<long>(len);
 
   auto start = high_resolution_clock::now();
   compc::EliasGamma<long> elias;
-  uint8_t* comp = elias.compress(random_array, len);
+  std::unique_ptr<uint8_t[]> comp = elias.compress(random_array.get(), len);
   std::cout << "binary size: " << len << std::endl;
   auto mid = high_resolution_clock::now();
-  long* output = elias.decompress(comp, len, len_copy);
+  std::unique_ptr<long[]> output = elias.decompress(comp.get(), len, len_copy);
   // std::cout << "decompress" << std::endl;
 
   auto stop = high_resolution_clock::now();
@@ -48,9 +46,6 @@ TEST(Elias_Gamma_SpeedTestLong, CheckValues) {
     // std::cout << i << std::endl;
     ASSERT_EQ(output[i], random_array[i]); // comparing values
   }
-  delete[] comp;
-  delete[] output;
-  delete[] random_array;
 }
 
 TEST(Elias_Gamma_DecompCompEQTestInt, CheckValues) {
@@ -58,15 +53,13 @@ TEST(Elias_Gamma_DecompCompEQTestInt, CheckValues) {
   int input[10] = {1, 3, 2000, 2, 50, 1, 25345, 11, 1000000, 1};
   compc::EliasGamma<int> elias;
   std::cout << "size: " << sizeof(input) << std::endl;
-  uint8_t* comp = elias.compress(input, size);
+  std::unique_ptr<uint8_t[]> comp = elias.compress(input, size);
 
-  int* output = elias.decompress(comp, size, 10);
+  std::unique_ptr<int[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
   for (int i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
-  delete[] comp;
-  delete[] output;
 }
 
 TEST(Elias_Gamma_DecompCompEQTestShort, CheckValues) {
@@ -74,15 +67,13 @@ TEST(Elias_Gamma_DecompCompEQTestShort, CheckValues) {
   short input[10] = {1, 3, 2000, 2, 50, 1, 25345, 11, 10000, 1};
   compc::EliasGamma<short> elias;
   std::cout << "size: " << sizeof(input) << std::endl;
-  uint8_t* comp = elias.compress(input, size);
+  std::unique_ptr<uint8_t[]> comp = elias.compress(input, size);
 
-  short* output = elias.decompress(comp, size, 10);
+  std::unique_ptr<short[]> output = elias.decompress(comp.get(), size, 10);
   // ASSERT_EQ(size, 21);
   for (int i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
-  delete[] comp;
-  delete[] output;
 }
 
 TEST(Helpers_transform_to_natural_numbers, CheckValues) {
@@ -136,38 +127,36 @@ TEST(Helpers_transform_to_natural_numbers_switch_9, CheckValues) {
 
 TEST(Helpers_transform_to_natural_numbers_SpeedTestLong, CheckValues) {
   std::size_t len = 500000;
-  long* random_array = compc_test::get_random_array<long>(len);
+  auto random_array = compc_test::get_random_array<long>(len);
 
   auto start = high_resolution_clock::now();
   compc::EliasGamma<long> elias;
-  elias.transform_to_natural_numbers(random_array, len);
+  elias.transform_to_natural_numbers(random_array.get(), len);
   auto mid = high_resolution_clock::now();
-  elias.transform_to_natural_numbers_reverse(random_array, len);
+  elias.transform_to_natural_numbers_reverse(random_array.get(), len);
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<microseconds>(stop - start);
   auto mid_duration = duration_cast<microseconds>(mid - start);
   auto decomp_duration = duration_cast<microseconds>(stop - mid);
   std::cout << "Total: " << duration.count() << " forward: " << mid_duration.count()
             << " backward: " << decomp_duration.count() << std::endl;
-  delete[] random_array;
 }
 
 TEST(Helpers_add_offset_SpeedTestLong, CheckValues) {
   std::size_t len = 500000;
-  long* random_array = compc_test::get_random_array<long>(len);
+  auto random_array = compc_test::get_random_array<long>(len);
 
   auto start = high_resolution_clock::now();
   compc::EliasGamma<long> elias;
-  elias.add_offset(random_array, len, 1);
+  elias.add_offset(random_array.get(), len, 1);
   auto mid = high_resolution_clock::now();
-  elias.add_offset(random_array, len, -1);
+  elias.add_offset(random_array.get(), len, -1);
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<microseconds>(stop - start);
   auto mid_duration = duration_cast<microseconds>(mid - start);
   auto decomp_duration = duration_cast<microseconds>(stop - mid);
   std::cout << "Total: " << duration.count() << " forward: " << mid_duration.count()
             << " backward: " << decomp_duration.count() << std::endl;
-  delete[] random_array;
 }
 
 TEST(Helpers_add_offset, CheckValues) {
@@ -195,13 +184,11 @@ TEST(Elias_Gamma_DecompCompEQTestNegativeLong, CheckValues) {
   long input[10] = {1, 3, 2000, 2, 50, 1, 25345, 11, 10000, 1};
   compc::EliasGamma<long> elias{1, true};
   ASSERT_EQ(elias.offset, 1);
-  uint8_t* comp = elias.compress(input, size);
-  long* output = elias.decompress(comp, size, 10);
+  std::unique_ptr<uint8_t[]> comp = elias.compress(input, size);
+  std::unique_ptr<long[]> output = elias.decompress(comp.get(), size, 10);
   for (int i = 0; i < 10; i++) {
     ASSERT_EQ(output[i], input[i]); // comparing values
   }
-  delete[] comp;
-  delete[] output;
 }
 
 // TODO: For offset and mapping to numbers we are not doing an overflow check.

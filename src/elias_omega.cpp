@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -79,25 +80,28 @@ compc::ArrayPrefixSummary compc::EliasOmega<T>::get_prefix_sum_array(const T* ar
                                    error}; // this should use elision
 }
 
-template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_array, std::size_t& size) {
+template <typename T>
+std::unique_ptr<uint8_t[]> compc::EliasOmega<T>::compress(const T* input_array, std::size_t& size) {
   const uint64_t N = size;
   const T* array = nullptr;
+  std::unique_ptr<T[]> heap_copy_array; // TODO change to make_unique_for_overwrite
+  if (this->map_negative_numbers || this->offset != 0) {
+    heap_copy_array = std::move(std::unique_ptr<T[]>(new T[size]));
+  }
   bool not_transformed = true;
   if (this->map_negative_numbers) {
-    T* heap_copy_array = new T[size];
-    std::memcpy(static_cast<void*>(heap_copy_array), static_cast<const void*>(input_array), size * sizeof(T));
-    this->transform_to_natural_numbers(heap_copy_array, size);
+    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
+    this->transform_to_natural_numbers(heap_copy_array.get(), size);
     if (this->offset != 0) {
-      this->add_offset(heap_copy_array, size, this->offset);
+      this->add_offset(heap_copy_array.get(), size, this->offset);
     }
-    array = heap_copy_array;
+    array = heap_copy_array.get();
     not_transformed = false;
   }
   if (not_transformed && this->offset != 0) {
-    T* heap_copy_array = new T[size];
-    std::memcpy(static_cast<void*>(heap_copy_array), static_cast<const void*>(input_array), size * sizeof(T));
-    this->add_offset(heap_copy_array, size, this->offset);
-    array = heap_copy_array;
+    std::memcpy(static_cast<void*>(heap_copy_array.get()), static_cast<const void*>(input_array), size * sizeof(T));
+    this->add_offset(heap_copy_array.get(), size, this->offset);
+    array = heap_copy_array.get();
     not_transformed = false;
   }
   if (not_transformed) {
@@ -108,9 +112,6 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
 
   ArrayPrefixSummary prefix_tuple = this->get_prefix_sum_array(array, N); // in bits
   if (prefix_tuple.error) {
-    if (!not_transformed) {
-      delete[] array;
-    }
     return nullptr;
   }
 
@@ -121,7 +122,7 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
   const uint64_t compressed_length = prefix_array[total_chunks - 1];
   const uint64_t compressed_bytes = (compressed_length + 7) / 8; // getting the number of bytes (ceil)
   // zero initialize, otherwise there are problems at the edges of the batches
-  auto* compressed = new uint8_t[compressed_bytes]();
+  std::unique_ptr<uint8_t[]> compressed = std::make_unique<uint8_t[]>(compressed_bytes);
 
 #pragma omp parallel default(none) shared(compressed, prefix_array, array) firstprivate(N, total_chunks, batch_size)   \
     num_threads(local_threads)
@@ -202,16 +203,14 @@ template <typename T> uint8_t* compc::EliasOmega<T>::compress(const T* input_arr
       }
     }
   }
-  if (this->map_negative_numbers) {
-    delete[] array;
-  }
   size = compressed_bytes;
   return compressed;
 }
 
 template <typename T>
-T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_length, std::size_t array_length) {
-  T* uncomp = new T[array_length];
+std::unique_ptr<T[]> compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_length,
+                                                      std::size_t array_length) {
+  std::unique_ptr<T[]> uncomp(new T[array_length]);
   std::size_t index = 0;
   T current_decoded_number = 0;
   std::size_t binary_index = 0;
@@ -266,10 +265,10 @@ T* compc::EliasOmega<T>::decompress(const uint8_t* array, std::size_t binary_len
     }
   }
   if (this->offset != 0) {
-    this->add_offset(uncomp, array_length, -this->offset);
+    this->add_offset(uncomp.get(), array_length, -this->offset);
   }
   if (this->map_negative_numbers) {
-    this->transform_to_natural_numbers_reverse(uncomp, array_length);
+    this->transform_to_natural_numbers_reverse(uncomp.get(), array_length);
   }
   return uncomp;
 }
