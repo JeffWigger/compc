@@ -2,9 +2,9 @@ name: Ubuntu
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   BUILD_TYPE: Release
@@ -39,7 +39,7 @@ jobs:
         cmake --build build --target install --config Release
 
     - name: configure
-      run: cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_LOCATION -Dcompc_ENABLE_UNIT_TESTING=1 -Dcompc_ENABLE_CODE_COVERAGE=0 -D CMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_LOCATION -Dcompintc_ENABLE_UNIT_TESTING=1 -Dcompintc_ENABLE_CODE_COVERAGE=0 -D CMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: build
       run: cmake --build build --config $BUILD_TYPE -j4

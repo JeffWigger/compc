@@ -4,7 +4,7 @@
 #include <memory>
 #include <tuple>
 
-#include "compc/elias_base.hpp"
+#include "compintc/elias_base.hpp"
 namespace compc {
 
 template <typename T> class EliasGamma : public EliasBase<T> {

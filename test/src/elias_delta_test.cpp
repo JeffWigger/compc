@@ -1,4 +1,4 @@
-#include "compc/elias_delta.hpp"
+#include "compintc/elias_delta.hpp"
 #include "helpers.hpp"
 #include <bitset>
 #include <chrono>
