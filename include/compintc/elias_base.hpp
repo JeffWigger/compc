@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include "compc/compressor.hpp"
-#include "compc/helpers.hpp"
+#include "compintc/compressor.hpp"
+#include "compintc/helpers.hpp"
 namespace compc {
 
 struct ArrayPrefixSummary {

@@ -1,4 +1,4 @@
-#include "compc/elias_delta.hpp"
+#include "compintc/elias_delta.hpp"
 
 #include <cmath>
 #include <omp.h>
@@ -11,7 +11,7 @@
 #include <tuple>
 #include <vector>
 
-#include "compc/helpers.hpp"
+#include "compintc/helpers.hpp"
 
 template <typename T> std::size_t compc::EliasDelta<T>::get_compressed_length(const T* array, std::size_t length) {
   compc::ArrayPrefixSummary prefix_tuple = get_prefix_sum_array(array, length);

@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.15)
 # (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 project(
-  "compc"
+  "compintc"
   VERSION 0.1.0
   LANGUAGES CXX)
 

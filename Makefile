@@ -44,21 +44,21 @@ help:
 
 test: ## run tests quickly with ctest
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Debug" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Debug" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompintc_ENABLE_CODE_COVERAGE=0
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 #--gtest_filter=Elias_Gamma_DecompCompEQTestLong
 
 test-fast: ## run tests quickly with ctest
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Release" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Release" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompintc_ENABLE_CODE_COVERAGE=0
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 #--gtest_filter=Elias_Gamma_DecompCompEQTestLong
 
 testAddress: ## run tests quickly with ctest
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=address
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompintc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=address
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 
@@ -67,19 +67,19 @@ testMemory: ## run tests quickly with ctest
 	# add -fsanitize-memory-track-origins for the prints to make more sense.
 	rm -rf build/
 	# only available with clang++
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=clang++ -Dcompc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=memory
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=clang++ -Dcompintc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=memory
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 
 testUndefined: ## run tests quickly with ctest
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=undefined
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_UNIT_TESTING=1 -DCMAKE_BUILD_TYPE="Sanatize" -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX) -Dcompintc_ENABLE_CODE_COVERAGE=0 -DSANATIZE_FLAG:STRING=undefined
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 
 coverage: ## check code coverage quickly GCC
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_CODE_COVERAGE=1 -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX)
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_CODE_COVERAGE=1 -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX)
 	cmake --build build --config Release
 	cd build/ && ctest -C Release -VV
 	cd .. && (bash -c "find . -type f -name '*.gcno' -exec gcov -pb {} +" || true)
@@ -87,7 +87,7 @@ coverage: ## check code coverage quickly GCC
 docs: ## generate Doxygen HTML documentation, including API docs
 	rm -rf docs/
 	rm -rf build/
-	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompc_ENABLE_DOXYGEN=1 -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX)
+	cmake -Bbuild -DCMAKE_INSTALL_PREFIX=$(INSTALL_LOCATION) -Dcompintc_ENABLE_DOXYGEN=1 -D CMAKE_C_COMPILER=$(CC) -D CMAKE_CXX_COMPILER=$(CXX)
 	cmake --build build --config Release
 	cmake --build build --target doxygen-docs
 	$(BROWSER) docs/html/index.html

@@ -1,4 +1,4 @@
-#include "compc/elias_gamma.hpp"
+#include "compintc/elias_gamma.hpp"
 #include "helpers.hpp"
 #include <bitset>
 #include <chrono>
